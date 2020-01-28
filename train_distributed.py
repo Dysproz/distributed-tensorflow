@@ -20,6 +20,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import logging
 import math
 import sys
 import tempfile
@@ -78,6 +79,16 @@ FLAGS = flags.FLAGS
 
 IMAGE_PIXELS = 28
 
+logging.basicConfig(filename=f'{FLAGS.log_dir}/deploy.log', level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.Debug)
+fh = logging.FileHandler(f'{FLAGS.log_dir}/deploy.log')
+ch = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+logger.addHandler(fh)
+logger.addHandler(ch)
 
 def main(unused_argv):
   mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
@@ -89,32 +100,34 @@ def main(unused_argv):
     if os.getenv("JOB_NAME") is not None:
       FLAGS.job_name = os.getenv("JOB_NAME")
     else:
+      logger.error("Must specify an explicit `job_name`")
       raise ValueError("Must specify an explicit `job_name`")
-  
 
   if os.getenv("POD_NAME") is not None:
       POD_NAME = os.environ.get('POD_NAME')
   else:
+    logger.error("Must specify an explicit `pod_name`")
       raise ValueError("Must specify an explicit `pod_name`")
-  
 
 
   job_name, task_index = POD_NAME.rsplit('-', 1)
   FLAGS.task_index = int(task_index)
 
-  print("job name = %s" % FLAGS.job_name)
-  print("task index = %d" % FLAGS.task_index)
+  logger.info("job name = %s" % FLAGS.job_name)
+  logger.info("task index = %d" % FLAGS.task_index)
 
   #Construct the cluster and start the server
   if FLAGS.ps_hosts is None or FLAGS.ps_hosts =="":
     if os.getenv("PS_HOSTS") is not None:
       FLAGS.ps_hosts = os.getenv("PS_HOSTS")
     else:
+      logger.error("Failed to find PS hosts info.")
       raise ValueError("Failed to find PS hosts info.")
   if FLAGS.worker_hosts is None or FLAGS.worker_hosts =="":
     if os.getenv("WORKER_HOSTS") is not None:
       FLAGS.worker_hosts = os.getenv("WORKER_HOSTS")
     else:
+      logger.error("Failed to find Worker hosts info.")
       raise ValueError("Failed to find Worker hosts info.")
   ps_spec = FLAGS.ps_hosts.split(",")
   worker_spec = FLAGS.worker_hosts.split(",")
@@ -136,6 +149,7 @@ def main(unused_argv):
   is_chief = (FLAGS.task_index == 0)
   if FLAGS.num_gpus > 0:
     if FLAGS.num_gpus < num_workers:
+      logger.error("number of gpus is less than number of workers")
       raise ValueError("number of gpus is less than number of workers")
     # Avoid gpu allocation conflict: now allocate task_num -> #gpu 
     # for each worker in the corresponding machine
@@ -288,21 +302,21 @@ def main(unused_argv):
     # The chief worker (task_index==0) session will prepare the session,
     # while the remaining workers will wait for the preparation to complete.
     if is_chief:
-      print("Worker %d: Initializing session..." % FLAGS.task_index)
+      logger.info("Worker %d: Initializing session..." % FLAGS.task_index)
     else:
-      print("Worker %d: Waiting for session to be initialized..." %
+      logger.info("Worker %d: Waiting for session to be initialized..." %
             FLAGS.task_index)
 
     if FLAGS.existing_servers:
       server_grpc_url = "grpc://" + worker_spec[FLAGS.task_index]
-      print("Using existing server at: %s" % server_grpc_url)
+      logger.info("Using existing server at: %s" % server_grpc_url)
 
       sess = sv.prepare_or_wait_for_session(server_grpc_url,
                                             config=sess_config)
     else:
       sess = sv.prepare_or_wait_for_session(server.target, config=sess_config)
 
-    print("Worker %d: Session initialization complete." % FLAGS.task_index)
+    loger.info("Worker %d: Session initialization complete." % FLAGS.task_index)
 
     if FLAGS.sync_replicas and is_chief:
       # Chief worker will start the chief queue runner and call the init op.
@@ -313,7 +327,7 @@ def main(unused_argv):
     test_writer = tf.summary.FileWriter(FLAGS.log_dir + '/test')
     # Perform training
     time_begin = time.time()
-    print("Training begins @ %f" % time_begin)
+    logger.info("Training begins @ %f" % time_begin)
 
     local_step = 0
     step = 0
@@ -324,7 +338,7 @@ def main(unused_argv):
         acc, summary = sess.run([accuracy, summary_op], feed_dict=test_feed)
         test_writer.add_summary(summary, local_step)
         local_step += 1
-        print("Accuracy at local step %s: %s" % (local_step, acc))
+        logger.info("Accuracy at local step %s: %s" % (local_step, acc))
       else:
         # Training feed
         batch_xs, batch_ys = mnist.train.next_batch(FLAGS.batch_size)
@@ -335,19 +349,18 @@ def main(unused_argv):
         train_writer.add_summary(summary, step)
 
         now = time.time()
-        print("%f: Worker %d: training step %d done (global step: %d)" %
+        logger.info("%f: Worker %d: training step %d done (global step: %d)" %
               (now, FLAGS.task_index, local_step, step))
 
       if step >= FLAGS.train_steps and FLAGS.train_steps > 0:
         break
 
     time_end = time.time()
-    print("Training ends @ %f" % time_end)
+    logger.info("Training ends @ %f" % time_end)
     training_time = time_end - time_begin
-    print("Training elapsed time: %f s" % training_time)
+    logger.info("Training elapsed time: %f s" % training_time)
     train_writer.close()
     test_writer.close()
-    
     sv.stop()
 
 
