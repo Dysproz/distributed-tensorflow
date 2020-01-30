@@ -36,55 +36,50 @@ flags.DEFINE_string("log_dir", "/tmp/mnist-log",
                     "Directory for storing traing result data")
 flags.DEFINE_boolean("log_device_placement", True,
                      "Enable log of training device placement information")
-flags.DEFINE_boolean(
-    "download_only", False,
-    "Only perform downloading of data; Do not proceed to "
-    "session preparation, model definition or training")
-flags.DEFINE_integer(
-    "num_gpus", 0, "Total number of gpus for each machine."
-    "If you don't use GPU, please set it to '0'")
-flags.DEFINE_integer(
-    "replicas_to_aggregate", None,
-    "Number of replicas to aggregate before parameter update"
-    "is applied (For sync_replicas mode only; default: "
-    "num_workers)")
+flags.DEFINE_boolean("download_only", False,
+                     "Only perform downloading of data; Do not proceed to "
+                     "session preparation, model definition or training")
+flags.DEFINE_integer("num_gpus", 0, "Total number of gpus for each machine."
+                     "If you don't use GPU, please set it to '0'")
+flags.DEFINE_integer("replicas_to_aggregate", None,
+                     "Number of replicas to aggregate before parameter update"
+                     "is applied (For sync_replicas mode only; default: "
+                     "num_workers)")
 flags.DEFINE_integer("hidden_units", 100,
                      "Number of units in the hidden layer of the NN")
 flags.DEFINE_integer("train_steps", 0,
                      "Number of (global) training steps to perform")
 flags.DEFINE_integer("batch_size", 100, "Training batch size")
 flags.DEFINE_float("learning_rate", 0.01, "Learning rate")
-flags.DEFINE_boolean(
-    "sync_replicas", False,
-    "Use the sync_replicas (synchronized replicas) mode, "
-    "wherein the parameter updates from workers are "
-    "aggregated before applied to avoid stale gradients")
-flags.DEFINE_boolean(
-    "existing_servers", False, "Whether servers already exists. If True, "
-    "will use the worker hosts via their GRPC URLs (one client process "
-    "per worker host). Otherwise, will create an in-process TensorFlow "
-    "server.")
+flags.DEFINE_boolean("sync_replicas", False,
+                     "Use the sync_replicas (synchronized replicas) mode, "
+                     "wherein the parameter updates from workers are "
+                     "aggregated before applied to avoid stale gradients")
+flags.DEFINE_boolean("existing_servers", False, "Whether servers already exists. If True, "
+                     "will use the worker hosts via their GRPC URLs (one client process "
+                     "per worker host). Otherwise, will create an in-process TensorFlow "
+                     "server.")
 flags.DEFINE_string("ps_hosts", "",
                     "Comma-separated list of hostname:port pairs")
 flags.DEFINE_string("worker_hosts", "",
                     "Comma-separated list of hostname:port pairs")
 flags.DEFINE_string("role_name", None, "role name: worker-0 or ps-0")
 flags.DEFINE_string("job_name", None, "job name: worker or ps")
-flags.DEFINE_integer(
-    "task_index", None, "Worker task index, should be >= 0. task_index=0 is "
-    "the master worker task the performs the variable "
-    "initialization ")
+flags.DEFINE_integer("task_index", None, "Worker task index, should be >= 0. task_index=0 is "
+                     "the master worker task the performs the variable "
+                     "initialization ")
 
 FLAGS = flags.FLAGS
 
 IMAGE_PIXELS = 28
+
 log_dir = FLAGS.log_dir
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 logging.basicConfig(filename='{dir}/deploy.log'.format(dir=log_dir),
                     level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.Debug)
+logger.setLevel(logging.DEBUG)
 fh = logging.FileHandler('{dir}/deploy.log'.format(dir=log_dir))
 ch = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter(
@@ -281,7 +276,6 @@ def main(unused_argv):
         init_op = tf.global_variables_initializer()
 
         # train_dir = tempfile.mkdtemp()
-        
 
         if FLAGS.sync_replicas:
             sv = tf.train.Supervisor(
@@ -374,13 +368,13 @@ def main(unused_argv):
             if step >= FLAGS.train_steps and FLAGS.train_steps > 0:
                 break
 
-            time_end = time.time()
-            logger.info("Training ends @ %f" % time_end)
-            training_time = time_end - time_begin
-            logger.info("Training elapsed time: %f s" % training_time)
-            train_writer.close()
-            test_writer.close()
-            sv.stop()
+        time_end = time.time()
+        logger.info("Training ends @ %f" % time_end)
+        training_time = time_end - time_begin
+        logger.info("Training elapsed time: %f s" % training_time)
+        train_writer.close()
+        test_writer.close()
+        sv.stop()
 
 
 if __name__ == "__main__":
