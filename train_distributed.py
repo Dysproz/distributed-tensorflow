@@ -78,12 +78,14 @@ flags.DEFINE_integer(
 FLAGS = flags.FLAGS
 
 IMAGE_PIXELS = 28
-
-logging.basicConfig(filename='{dir}/deploy.log'.format(dir=FLAGS.log_dir),
+log_dir = FLAGS.log_dir
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+logging.basicConfig(filename='{dir}/deploy.log'.format(dir=log_dir),
                     level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.Debug)
-fh = logging.FileHandler('{dir}/deploy.log'.format(dir=FLAGS.log_dir))
+fh = logging.FileHandler('{dir}/deploy.log'.format(dir=log_dir))
 ch = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -279,9 +281,7 @@ def main(unused_argv):
         init_op = tf.global_variables_initializer()
 
         # train_dir = tempfile.mkdtemp()
-        log_dir = FLAGS.log_dir
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        
 
         if FLAGS.sync_replicas:
             sv = tf.train.Supervisor(
