@@ -282,6 +282,7 @@ def main(unused_argv):
                 is_chief=is_chief,
                 logdir=FLAGS.log_dir,
                 init_op=init_op,
+                summary_op=None,
                 local_init_op=local_init_op,
                 ready_for_local_init_op=ready_for_local_init_op,
                 recovery_wait_secs=1,
@@ -290,6 +291,7 @@ def main(unused_argv):
             sv = tf.train.Supervisor(is_chief=is_chief,
                                      logdir=FLAGS.log_dir,
                                      init_op=init_op,
+                                     summary_op=None,
                                      recovery_wait_secs=1,
                                      global_step=global_step)
 
