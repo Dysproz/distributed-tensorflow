@@ -5,8 +5,9 @@ DOCKER ?= docker
 all: gpu cpu
 
 
-gpu: 
-	$(DOCKER) build  -t distributed-tf:1.6.0-gpu -f Dockerfile.gpu .
+gpu:
+	$(DOCKER) build  -t distributed-tf:1.7.0-gpu -f Dockerfile.gpu .
 
 cpu:
-	$(DOCKER) build  -t distributed-tf:1.6.0 -f Dockerfile.cpu .
+	$(DOCKER) build  -t distributed-tf:1.7.0 -f Dockerfile.cpu .
+
